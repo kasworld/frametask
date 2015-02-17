@@ -6,26 +6,17 @@ import (
 	"sync"
 )
 
-type Task struct {
-	ID    int64
-	Obj   interface{}
-	frame int64
+type TaskI interface {
+	GetID() int64
+	SetFrame(f int64)
+	GetFrame() int64
 }
 
-func (t Task) String() string {
-	return fmt.Sprintf("Task ID:%v, Obj:%v, Frame:%v",
-		t.ID, t.Obj, t.frame)
-}
-
-func (t *Task) GetFrame() int64 {
-	return t.frame
-}
-
-type TaskList []*Task
+type TaskList []TaskI
 
 type TaskQueue struct {
 	frame2task map[int64]TaskList
-	id2task    map[int64]*Task
+	id2task    map[int64]TaskI
 	mutex      sync.Mutex
 }
 
@@ -36,16 +27,16 @@ func (ftq TaskQueue) String() string {
 func New() *TaskQueue {
 	return &TaskQueue{
 		frame2task: make(map[int64]TaskList),
-		id2task:    make(map[int64]*Task),
+		id2task:    make(map[int64]TaskI),
 	}
 }
 
-func (ftq *TaskQueue) AddTaskToFrame(task *Task, step int64) {
+func (ftq *TaskQueue) AddTaskToFrame(task TaskI, step int64) {
 	ftq.mutex.Lock()
 	defer ftq.mutex.Unlock()
-	task.frame = step
+	task.SetFrame(step)
 	ftq.frame2task[step] = append(ftq.frame2task[step], task)
-	ftq.id2task[task.ID] = task
+	ftq.id2task[task.GetID()] = task
 }
 
 func (ftq *TaskQueue) GetTaskListByFrame(step int64) TaskList {
@@ -60,29 +51,29 @@ func (ftq *TaskQueue) ClearFrame(step int64) {
 		if v == nil {
 			continue
 		}
-		delete(ftq.id2task, v.ID)
+		delete(ftq.id2task, v.GetID())
 	}
 	delete(ftq.frame2task, step)
 }
 
-func (ftq *TaskQueue) GetTaskByID(id int64) *Task {
+func (ftq *TaskQueue) GetTaskByID(id int64) TaskI {
 	return ftq.id2task[id]
 }
 
-func (ftq *TaskQueue) CancelTaskByID(id int64) *Task {
+func (ftq *TaskQueue) CancelTaskByID(id int64) TaskI {
 	ftq.mutex.Lock()
 	defer ftq.mutex.Unlock()
 	task := ftq.GetTaskByID(id)
 	if task == nil {
 		return task
 	}
-	tasks := ftq.GetTaskListByFrame(task.frame)
+	tasks := ftq.GetTaskListByFrame(task.GetFrame())
 	for i, v := range tasks {
 		if v == nil {
 			continue
 		}
-		if v.ID == id {
-			delete(ftq.id2task, v.ID)
+		if v.GetID() == id {
+			delete(ftq.id2task, v.GetID())
 			tasks[i] = nil
 			return task
 		}
