@@ -6,17 +6,17 @@ import (
 	"sync"
 )
 
-type TaskI interface {
+type taskI interface {
 	GetID() int64
 	SetFrame(f int64)
 	GetFrame() int64
 }
 
-type TaskList []TaskI
+type TaskList []taskI
 
 type TaskQueue struct {
 	frame2task map[int64]TaskList
-	id2task    map[int64]TaskI
+	id2task    map[int64]taskI
 	mutex      sync.Mutex
 }
 
@@ -27,11 +27,11 @@ func (ftq TaskQueue) String() string {
 func New() *TaskQueue {
 	return &TaskQueue{
 		frame2task: make(map[int64]TaskList),
-		id2task:    make(map[int64]TaskI),
+		id2task:    make(map[int64]taskI),
 	}
 }
 
-func (ftq *TaskQueue) AddTaskToFrame(task TaskI, step int64) {
+func (ftq *TaskQueue) AddTaskToFrame(task taskI, step int64) {
 	ftq.mutex.Lock()
 	defer ftq.mutex.Unlock()
 	task.SetFrame(step)
@@ -56,11 +56,11 @@ func (ftq *TaskQueue) ClearFrame(step int64) {
 	delete(ftq.frame2task, step)
 }
 
-func (ftq *TaskQueue) GetTaskByID(id int64) TaskI {
+func (ftq *TaskQueue) GetTaskByID(id int64) taskI {
 	return ftq.id2task[id]
 }
 
-func (ftq *TaskQueue) CancelTaskByID(id int64) TaskI {
+func (ftq *TaskQueue) CancelTaskByID(id int64) taskI {
 	ftq.mutex.Lock()
 	defer ftq.mutex.Unlock()
 	task := ftq.GetTaskByID(id)
